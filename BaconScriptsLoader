@@ -1,0 +1,660 @@
+--[[
+    Bacon Hub Loader — with Extra Scripts (Booster + Music)
+--]]
+
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+
+local ParentGui
+pcall(function() ParentGui = game:GetService("CoreGui") end)
+if not ParentGui then
+    ParentGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- ============ PALETTE ============
+local C = {
+    Bg          = Color3.fromRGB(15, 15, 19),
+    Bg2         = Color3.fromRGB(19, 19, 24),
+    Card        = Color3.fromRGB(24, 24, 30),
+    CardHover   = Color3.fromRGB(30, 30, 38),
+    Stroke      = Color3.fromRGB(38, 38, 48),
+    StrokeLight = Color3.fromRGB(52, 52, 66),
+    Accent      = Color3.fromRGB(120, 90, 255),
+    Accent2     = Color3.fromRGB(180, 130, 255),
+    AccentHover = Color3.fromRGB(145, 115, 255),
+    Text        = Color3.fromRGB(240, 240, 250),
+    TextDim     = Color3.fromRGB(130, 130, 150),
+    TextDim2    = Color3.fromRGB(90, 90, 105),
+    Success     = Color3.fromRGB(70, 220, 130),
+    Error       = Color3.fromRGB(255, 85, 85),
+    Warn        = Color3.fromRGB(255, 190, 90),
+}
+
+-- ============ ROOT ============
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "\0" .. string.rep("\0", math.random(4, 8))
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = ParentGui
+
+-- ============ WINDOW ============
+local Window = Instance.new("CanvasGroup")
+Window.Name = "\0"
+Window.Size = UDim2.new(0, 600, 0, 420)
+Window.Position = UDim2.new(0.5, -300, 0.5, -210)
+Window.BackgroundColor3 = C.Bg
+Window.BackgroundTransparency = 0
+Window.BorderSizePixel = 0
+Window.Active = true
+Window.GroupTransparency = 0
+Window.Parent = ScreenGui
+
+local winCorner = Instance.new("UICorner")
+winCorner.CornerRadius = UDim.new(0, 20)
+winCorner.Parent = Window
+
+-- ============ TOPBAR ============
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0, 52)
+TopBar.Position = UDim2.new(0, 0, 0, 0)
+TopBar.BackgroundColor3 = C.Bg2
+TopBar.BorderSizePixel = 0
+TopBar.ZIndex = 2
+TopBar.Parent = Window
+
+local logo = Instance.new("Frame")
+logo.Size = UDim2.new(0, 28, 0, 28)
+logo.Position = UDim2.new(0, 20, 0.5, -14)
+logo.BackgroundColor3 = C.Accent
+logo.BorderSizePixel = 0
+logo.ZIndex = 3
+logo.Parent = TopBar
+
+local logoCorner = Instance.new("UICorner")
+logoCorner.CornerRadius = UDim.new(1, 0)
+logoCorner.Parent = logo
+
+local logoGrad = Instance.new("UIGradient")
+logoGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, C.Accent),
+    ColorSequenceKeypoint.new(1, C.Accent2),
+})
+logoGrad.Rotation = 45
+logoGrad.Parent = logo
+
+local logoLetter = Instance.new("TextLabel")
+logoLetter.Size = UDim2.new(1, 0, 1, 0)
+logoLetter.BackgroundTransparency = 1
+logoLetter.Text = "B"
+logoLetter.TextColor3 = Color3.fromRGB(255, 255, 255)
+logoLetter.Font = Enum.Font.GothamBold
+logoLetter.TextSize = 15
+logoLetter.ZIndex = 4
+logoLetter.Parent = logo
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(0, 200, 0, 18)
+titleText.Position = UDim2.new(0, 60, 0, 10)
+titleText.BackgroundTransparency = 1
+titleText.Text = "Bacon Hub"
+titleText.TextColor3 = C.Text
+titleText.Font = Enum.Font.GothamBold
+titleText.TextSize = 14
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.ZIndex = 3
+titleText.Parent = TopBar
+
+local subtitleText = Instance.new("TextLabel")
+subtitleText.Size = UDim2.new(0, 200, 0, 12)
+subtitleText.Position = UDim2.new(0, 60, 0, 28)
+subtitleText.BackgroundTransparency = 1
+subtitleText.Text = "Scripts Loader"
+subtitleText.TextColor3 = C.TextDim
+subtitleText.Font = Enum.Font.Gotham
+subtitleText.TextSize = 10
+subtitleText.TextXAlignment = Enum.TextXAlignment.Left
+subtitleText.ZIndex = 3
+subtitleText.Parent = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 34, 0, 34)
+CloseBtn.Position = UDim2.new(1, -46, 0.5, -17)
+CloseBtn.BackgroundColor3 = C.Card
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = C.TextDim
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 22
+CloseBtn.AutoButtonColor = false
+CloseBtn.ZIndex = 3
+CloseBtn.Parent = TopBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 10)
+closeCorner.Parent = CloseBtn
+
+CloseBtn.MouseEnter:Connect(function()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = C.Error,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+    }):Play()
+end)
+CloseBtn.MouseLeave:Connect(function()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = C.Card,
+        TextColor3 = C.TextDim,
+    }):Play()
+end)
+
+-- Dragging
+local dragging, dragStart, startPos
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Window.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local d = input.Position - dragStart
+        Window.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + d.X,
+            startPos.Y.Scale, startPos.Y.Offset + d.Y
+        )
+    end
+end)
+
+-- ============ SIDEBAR ============
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Size = UDim2.new(0, 160, 1, -52)
+Sidebar.Position = UDim2.new(0, 0, 0, 52)
+Sidebar.BackgroundColor3 = C.Bg2
+Sidebar.BorderSizePixel = 0
+Sidebar.ZIndex = 2
+Sidebar.Parent = Window
+
+local sbTitle = Instance.new("TextLabel")
+sbTitle.Size = UDim2.new(1, -24, 0, 14)
+sbTitle.Position = UDim2.new(0, 16, 0, 16)
+sbTitle.BackgroundTransparency = 1
+sbTitle.Text = "SCRIPTS"
+sbTitle.TextColor3 = C.TextDim2
+sbTitle.Font = Enum.Font.GothamBold
+sbTitle.TextSize = 10
+sbTitle.TextXAlignment = Enum.TextXAlignment.Left
+sbTitle.ZIndex = 3
+sbTitle.Parent = Sidebar
+
+-- ============ TAB CREATOR ============
+local function makeTab(name, letter, yPos, isActive)
+    local tab = Instance.new("TextButton")
+    tab.Size = UDim2.new(1, -16, 0, 40)
+    tab.Position = UDim2.new(0, 8, 0, yPos)
+    tab.BackgroundColor3 = isActive and C.Card or C.Bg2
+    tab.BackgroundTransparency = isActive and 0 or 1
+    tab.BorderSizePixel = 0
+    tab.Text = ""
+    tab.AutoButtonColor = false
+    tab.ZIndex = 3
+    tab.Parent = Sidebar
+
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.CornerRadius = UDim.new(0, 10)
+    tabCorner.Parent = tab
+
+    local tabStroke = Instance.new("UIStroke")
+    tabStroke.Color = isActive and C.Stroke or C.Bg2
+    tabStroke.Transparency = isActive and 0 or 1
+    tabStroke.Thickness = 1
+    tabStroke.Parent = tab
+
+    local tabIndicator = Instance.new("Frame")
+    tabIndicator.Size = UDim2.new(0, 3, 0, 20)
+    tabIndicator.Position = UDim2.new(0, -2, 0.5, -10)
+    tabIndicator.BackgroundColor3 = C.Accent
+    tabIndicator.BorderSizePixel = 0
+    tabIndicator.ZIndex = 4
+    tabIndicator.BackgroundTransparency = isActive and 0 or 1
+    tabIndicator.Parent = tab
+
+    local tabIndCorner = Instance.new("UICorner")
+    tabIndCorner.CornerRadius = UDim.new(1, 0)
+    tabIndCorner.Parent = tabIndicator
+
+    local tabIcon = Instance.new("Frame")
+    tabIcon.Size = UDim2.new(0, 22, 0, 22)
+    tabIcon.Position = UDim2.new(0, 12, 0.5, -11)
+    tabIcon.BackgroundColor3 = C.Accent
+    tabIcon.BackgroundTransparency = isActive and 0.8 or 0.9
+    tabIcon.BorderSizePixel = 0
+    tabIcon.ZIndex = 4
+    tabIcon.Parent = tab
+
+    local tabIconCorner = Instance.new("UICorner")
+    tabIconCorner.CornerRadius = UDim.new(0, 6)
+    tabIconCorner.Parent = tabIcon
+
+    local tabIconLetter = Instance.new("TextLabel")
+    tabIconLetter.Size = UDim2.new(1, 0, 1, 0)
+    tabIconLetter.BackgroundTransparency = 1
+    tabIconLetter.Text = letter
+    tabIconLetter.TextColor3 = isActive and C.Accent2 or C.TextDim
+    tabIconLetter.Font = Enum.Font.GothamBold
+    tabIconLetter.TextSize = 12
+    tabIconLetter.ZIndex = 5
+    tabIconLetter.Parent = tabIcon
+
+    local tabText = Instance.new("TextLabel")
+    tabText.Size = UDim2.new(1, -50, 1, 0)
+    tabText.Position = UDim2.new(0, 42, 0, 0)
+    tabText.BackgroundTransparency = 1
+    tabText.Text = name
+    tabText.TextColor3 = isActive and C.Text or C.TextDim
+    tabText.Font = Enum.Font.GothamMedium
+    tabText.TextSize = 12
+    tabText.TextXAlignment = Enum.TextXAlignment.Left
+    tabText.ZIndex = 4
+    tabText.Parent = tab
+
+    tab.MouseEnter:Connect(function()
+        if not isActive then
+            TweenService:Create(tab, TweenInfo.new(0.15), {BackgroundTransparency = 0.5}):Play()
+            TweenService:Create(tabText, TweenInfo.new(0.15), {TextColor3 = C.Text}):Play()
+            TweenService:Create(tabIconLetter, TweenInfo.new(0.15), {TextColor3 = C.Accent2}):Play()
+        end
+    end)
+    tab.MouseLeave:Connect(function()
+        if not isActive then
+            TweenService:Create(tab, TweenInfo.new(0.15), {BackgroundTransparency = 1}):Play()
+            TweenService:Create(tabText, TweenInfo.new(0.15), {TextColor3 = C.TextDim}):Play()
+            TweenService:Create(tabIconLetter, TweenInfo.new(0.15), {TextColor3 = C.TextDim}):Play()
+        end
+    end)
+
+    return {
+        Button = tab,
+        Stroke = tabStroke,
+        Indicator = tabIndicator,
+        IconLetter = tabIconLetter,
+        Text = tabText,
+    }
+end
+
+-- ============ TABS ============
+local MainTab = makeTab("Main", "M", 40, true)
+local ExtraTab = makeTab("Extra Scripts", "E", 88, false)
+
+-- ============ CONTENT ============
+local Content = Instance.new("Frame")
+Content.Name = "Content"
+Content.Size = UDim2.new(1, -160, 1, -52)
+Content.Position = UDim2.new(0, 160, 0, 52)
+Content.BackgroundTransparency = 1
+Content.ClipsDescendants = true
+Content.Parent = Window
+
+-- ============ CARD BUILDER ============
+local function buildCard(parent, title, desc, iconLetter, yOffset)
+    local Card = Instance.new("Frame")
+    Card.Size = UDim2.new(1, -56, 0, 100)
+    Card.Position = UDim2.new(0, 28, 0, yOffset)
+    Card.BackgroundColor3 = C.Card
+    Card.BorderSizePixel = 0
+    Card.Parent = parent
+
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 12)
+    cardCorner.Parent = Card
+
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = C.Stroke
+    cardStroke.Thickness = 1
+    cardStroke.Parent = Card
+
+    local cardIcon = Instance.new("Frame")
+    cardIcon.Size = UDim2.new(0, 56, 0, 56)
+    cardIcon.Position = UDim2.new(0, 18, 0.5, -28)
+    cardIcon.BackgroundColor3 = C.Accent
+    cardIcon.BackgroundTransparency = 0.85
+    cardIcon.BorderSizePixel = 0
+    cardIcon.Parent = Card
+
+    local cardIconCorner = Instance.new("UICorner")
+    cardIconCorner.CornerRadius = UDim.new(0, 12)
+    cardIconCorner.Parent = cardIcon
+
+    local cardIconLetter = Instance.new("TextLabel")
+    cardIconLetter.Size = UDim2.new(1, 0, 1, 0)
+    cardIconLetter.BackgroundTransparency = 1
+    cardIconLetter.Text = iconLetter
+    cardIconLetter.TextColor3 = C.Accent2
+    cardIconLetter.Font = Enum.Font.GothamBold
+    cardIconLetter.TextSize = 26
+    cardIconLetter.Parent = cardIcon
+
+    local cardTitle = Instance.new("TextLabel")
+    cardTitle.Size = UDim2.new(0, 140, 0, 18)
+    cardTitle.Position = UDim2.new(0, 90, 0, 30)
+    cardTitle.BackgroundTransparency = 1
+    cardTitle.Text = title
+    cardTitle.TextColor3 = C.Text
+    cardTitle.Font = Enum.Font.GothamBold
+    cardTitle.TextSize = 13
+    cardTitle.TextXAlignment = Enum.TextXAlignment.Left
+    cardTitle.TextTruncate = Enum.TextTruncate.AtEnd
+    cardTitle.Parent = Card
+
+    local cardDesc = Instance.new("TextLabel")
+    cardDesc.Size = UDim2.new(0, 160, 0, 14)
+    cardDesc.Position = UDim2.new(0, 90, 0, 52)
+    cardDesc.BackgroundTransparency = 1
+    cardDesc.Text = desc
+    cardDesc.TextColor3 = C.TextDim
+    cardDesc.Font = Enum.Font.Gotham
+    cardDesc.TextSize = 11
+    cardDesc.TextXAlignment = Enum.TextXAlignment.Left
+    cardDesc.TextTruncate = Enum.TextTruncate.AtEnd
+    cardDesc.Parent = Card
+
+    local LoadBtn = Instance.new("TextButton")
+    LoadBtn.Size = UDim2.new(0, 110, 0, 40)
+    LoadBtn.Position = UDim2.new(1, -128, 0.5, -20)
+    LoadBtn.BackgroundColor3 = C.Accent
+    LoadBtn.BorderSizePixel = 0
+    LoadBtn.Text = "LOAD"
+    LoadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LoadBtn.Font = Enum.Font.GothamBold
+    LoadBtn.TextSize = 12
+    LoadBtn.AutoButtonColor = false
+    LoadBtn.Parent = Card
+
+    local loadCorner = Instance.new("UICorner")
+    loadCorner.CornerRadius = UDim.new(0, 10)
+    loadCorner.Parent = LoadBtn
+
+    local loadGrad = Instance.new("UIGradient")
+    loadGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.Accent),
+        ColorSequenceKeypoint.new(1, C.Accent2),
+    })
+    loadGrad.Rotation = 45
+    loadGrad.Parent = LoadBtn
+
+    Card.MouseEnter:Connect(function()
+        TweenService:Create(Card, TweenInfo.new(0.2), {BackgroundColor3 = C.CardHover}):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.2), {Color = C.StrokeLight}):Play()
+    end)
+    Card.MouseLeave:Connect(function()
+        TweenService:Create(Card, TweenInfo.new(0.2), {BackgroundColor3 = C.Card}):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.2), {Color = C.Stroke}):Play()
+    end)
+    LoadBtn.MouseEnter:Connect(function()
+        TweenService:Create(LoadBtn, TweenInfo.new(0.15), {BackgroundColor3 = C.AccentHover}):Play()
+    end)
+    LoadBtn.MouseLeave:Connect(function()
+        TweenService:Create(LoadBtn, TweenInfo.new(0.15), {BackgroundColor3 = C.Accent}):Play()
+    end)
+
+    return {
+        Frame = Card,
+        LoadBtn = LoadBtn,
+        Stroke = cardStroke,
+    }
+end
+
+-- ============ STATUS BAR BUILDER ============
+local function buildStatusBar(parent)
+    local StatusBar = Instance.new("Frame")
+    StatusBar.Size = UDim2.new(1, -56, 0, 32)
+    StatusBar.Position = UDim2.new(0, 28, 1, -42)
+    StatusBar.BackgroundColor3 = C.Card
+    StatusBar.BorderSizePixel = 0
+    StatusBar.Parent = parent
+
+    local sbCorner = Instance.new("UICorner")
+    sbCorner.CornerRadius = UDim.new(0, 8)
+    sbCorner.Parent = StatusBar
+
+    local sbStroke = Instance.new("UIStroke")
+    sbStroke.Color = C.Stroke
+    sbStroke.Thickness = 1
+    sbStroke.Parent = StatusBar
+
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 6, 0, 6)
+    dot.Position = UDim2.new(0, 16, 0.5, -3)
+    dot.BackgroundColor3 = C.TextDim
+    dot.BorderSizePixel = 0
+    dot.Parent = StatusBar
+
+    local dotCorner = Instance.new("UICorner")
+    dotCorner.CornerRadius = UDim.new(1, 0)
+    dotCorner.Parent = dot
+
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, -40, 1, 0)
+    text.Position = UDim2.new(0, 30, 0, 0)
+    text.BackgroundTransparency = 1
+    text.Text = "Ready to load"
+    text.TextColor3 = C.TextDim
+    text.Font = Enum.Font.Gotham
+    text.TextSize = 11
+    text.TextXAlignment = Enum.TextXAlignment.Left
+    text.TextTruncate = Enum.TextTruncate.AtEnd
+    text.Parent = StatusBar
+
+    return { Frame = StatusBar, Dot = dot, Text = text }
+end
+
+-- ============ UNIVERSAL LOADER ============
+local function attachLoader(cardHandle, statusHandle, url)
+    local loading = false
+
+    cardHandle.LoadBtn.MouseButton1Click:Connect(function()
+        if loading then return end
+        loading = true
+
+        statusHandle.Text.Text = "Loading..."
+        TweenService:Create(statusHandle.Text, TweenInfo.new(0.2), {TextColor3 = C.Warn}):Play()
+        TweenService:Create(statusHandle.Dot, TweenInfo.new(0.2), {BackgroundColor3 = C.Warn}):Play()
+        cardHandle.LoadBtn.Text = "..."
+        TweenService:Create(cardHandle.LoadBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.Warn}):Play()
+
+        task.spawn(function()
+            local function fail(msg)
+                statusHandle.Text.Text = msg
+                TweenService:Create(statusHandle.Text, TweenInfo.new(0.2), {TextColor3 = C.Error}):Play()
+                TweenService:Create(statusHandle.Dot, TweenInfo.new(0.2), {BackgroundColor3 = C.Error}):Play()
+                warn("[Bacon Hub] " .. msg)
+                task.wait(2)
+                cardHandle.LoadBtn.Text = "LOAD"
+                TweenService:Create(cardHandle.LoadBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.Accent}):Play()
+                loading = false
+            end
+
+            local source
+            local ok1 = pcall(function() source = game:HttpGet(url) end)
+            if not ok1 or not source or source == "" then
+                local ok2, res = pcall(function() return game:HttpGetAsync(url) end)
+                if ok2 then source = res end
+            end
+
+            if not source or source == "" then
+                fail("Error: HttpGet returned no data"); return
+            end
+            if type(source) ~= "string" then
+                fail("Error: HttpGet returned " .. typeof(source)); return
+            end
+            if #source < 20 then
+                fail("Error: empty response (" .. #source .. " bytes)"); return
+            end
+
+            local fn, compileErr = loadstring(source)
+            if not fn then
+                fail("Compile error: " .. tostring(compileErr)); return
+            end
+
+            local ok3, runErr = pcall(fn)
+            if not ok3 then
+                fail("Runtime error: " .. tostring(runErr)); return
+            end
+
+            statusHandle.Text.Text = "Script loaded successfully ✓"
+            TweenService:Create(statusHandle.Text, TweenInfo.new(0.2), {TextColor3 = C.Success}):Play()
+            TweenService:Create(statusHandle.Dot, TweenInfo.new(0.2), {BackgroundColor3 = C.Success}):Play()
+            cardHandle.LoadBtn.Text = "LOADED"
+            TweenService:Create(cardHandle.LoadBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.Success}):Play()
+            task.wait(1.5)
+            cardHandle.LoadBtn.Text = "LOAD"
+            TweenService:Create(cardHandle.LoadBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.Accent}):Play()
+            loading = false
+        end)
+    end)
+end
+
+-- ============ MAIN PAGE ============
+local MainPage = Instance.new("Frame")
+MainPage.Name = "MainPage"
+MainPage.Size = UDim2.new(1, 0, 1, 0)
+MainPage.Position = UDim2.new(0, 0, 0, 0)
+MainPage.BackgroundTransparency = 1
+MainPage.Parent = Content
+
+local bigTitle = Instance.new("TextLabel")
+bigTitle.Size = UDim2.new(1, -56, 0, 34)
+bigTitle.Position = UDim2.new(0, 28, 1, -124)
+bigTitle.BackgroundTransparency = 1
+bigTitle.Text = "Steal An Egg"
+bigTitle.TextColor3 = C.Text
+bigTitle.Font = Enum.Font.GothamBold
+bigTitle.TextSize = 24
+bigTitle.TextXAlignment = Enum.TextXAlignment.Left
+bigTitle.Parent = MainPage
+
+-- Подпись автора — теперь "By TT_Becon4ik"
+local bigSub = Instance.new("TextLabel")
+bigSub.Size = UDim2.new(1, -56, 0, 16)
+bigSub.Position = UDim2.new(0, 28, 1, -90)
+bigSub.BackgroundTransparency = 1
+bigSub.Text = "By TT_Becon4ik"
+bigSub.TextColor3 = C.TextDim
+bigSub.Font = Enum.Font.Gotham
+bigSub.TextSize = 11
+bigSub.TextXAlignment = Enum.TextXAlignment.Left
+bigSub.Parent = MainPage
+
+local MainCard = buildCard(MainPage, "Bacon Hub", "Steal An Egg Script", "B", 24)
+local MainStatusBar = buildStatusBar(MainPage)
+
+local MAIN_URL = "https://raw.githubusercontent.com/ScripterLua666/Roblox-Scripts/8c3df77ee090589604075a788247c84fa0c5f55d/ScripterLua666"
+attachLoader(MainCard, MainStatusBar, MAIN_URL)
+
+-- ============ EXTRA SCRIPTS PAGE ============
+local ExtraPage = Instance.new("Frame")
+ExtraPage.Name = "ExtraPage"
+ExtraPage.Size = UDim2.new(1, 0, 1, 0)
+ExtraPage.Position = UDim2.new(0, 0, 0, 0)
+ExtraPage.BackgroundTransparency = 1
+ExtraPage.Visible = false
+ExtraPage.Parent = Content
+
+local extraTitle = Instance.new("TextLabel")
+extraTitle.Size = UDim2.new(1, -56, 0, 24)
+extraTitle.Position = UDim2.new(0, 28, 0, 14)
+extraTitle.BackgroundTransparency = 1
+extraTitle.Text = "Extra Scripts"
+extraTitle.TextColor3 = C.Text
+extraTitle.Font = Enum.Font.GothamBold
+extraTitle.TextSize = 18
+extraTitle.TextXAlignment = Enum.TextXAlignment.Left
+extraTitle.Parent = ExtraPage
+
+local extraSub = Instance.new("TextLabel")
+extraSub.Size = UDim2.new(1, -56, 0, 14)
+extraSub.Position = UDim2.new(0, 28, 0, 40)
+extraSub.BackgroundTransparency = 1
+extraSub.Text = "additional scripts"
+extraSub.TextColor3 = C.TextDim
+extraSub.Font = Enum.Font.Gotham
+extraSub.TextSize = 10
+extraSub.TextXAlignment = Enum.TextXAlignment.Left
+extraSub.Parent = ExtraPage
+
+local BoosterCard = buildCard(ExtraPage, "Bacon Booster", "Booster Fps", "B", 66)
+local MusicCard = buildCard(ExtraPage, "Bacon Player", "Music Player Script", "B", 178)
+
+local ExtraStatusBar = buildStatusBar(ExtraPage)
+
+local BOOST_URL = "https://raw.githubusercontent.com/ScripterLua666/Script/refs/heads/main/BOOST%20FPS"
+local MUSIC_URL = "https://raw.githubusercontent.com/ScripterLua666/MusicPlayer/refs/heads/main/Music"
+
+attachLoader(BoosterCard, ExtraStatusBar, BOOST_URL)
+attachLoader(MusicCard,   ExtraStatusBar, MUSIC_URL)
+
+-- ============ TAB SWITCHING ============
+local function setActive(targetTab, targetPage, otherTab, otherPage)
+    TweenService:Create(targetTab.Button, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+    targetTab.Button.BackgroundColor3 = C.Card
+    TweenService:Create(targetTab.Stroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+    TweenService:Create(targetTab.Indicator, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(targetTab.Text, TweenInfo.new(0.2), {TextColor3 = C.Text}):Play()
+    TweenService:Create(targetTab.IconLetter, TweenInfo.new(0.2), {TextColor3 = C.Accent2}):Play()
+
+    TweenService:Create(otherTab.Button, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(otherTab.Stroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
+    TweenService:Create(otherTab.Indicator, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(otherTab.Text, TweenInfo.new(0.2), {TextColor3 = C.TextDim}):Play()
+    TweenService:Create(otherTab.IconLetter, TweenInfo.new(0.2), {TextColor3 = C.TextDim}):Play()
+
+    targetPage.Visible = true
+    otherPage.Visible = false
+end
+
+MainTab.Button.MouseButton1Click:Connect(function()
+    if not MainPage.Visible then
+        setActive(MainTab, MainPage, ExtraTab, ExtraPage)
+    end
+end)
+
+ExtraTab.Button.MouseButton1Click:Connect(function()
+    if not ExtraPage.Visible then
+        setActive(ExtraTab, ExtraPage, MainTab, MainPage)
+    end
+end)
+
+-- ============ CLOSE ============
+CloseBtn.MouseButton1Click:Connect(function()
+    for i = 0, 1, 0.05 do
+        Window.GroupTransparency = i
+        task.wait(0.01)
+    end
+    ScreenGui:Destroy()
+end)
+
+-- ============ APPEAR ============
+Window.GroupTransparency = 1
+Window.Position = UDim2.new(0.5, -300, 0.5, -198)
+
+task.spawn(function()
+    task.wait(0.05)
+    TweenService:Create(Window, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        GroupTransparency = 0,
+        Position = UDim2.new(0.5, -300, 0.5, -210),
+    }):Play()
+end)
+
+print("[Bacon Hub] Ready.")
+print("[Bacon Hub] Main URL: " .. MAIN_URL)
+print("[Bacon Hub] Booster URL: " .. BOOST_URL)
+print("[Bacon Hub] Music URL: " .. MUSIC_URL)
