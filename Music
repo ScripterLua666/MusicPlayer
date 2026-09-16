@@ -1,14 +1,15 @@
 -- // ============================================
 -- // BACON HUB
--- // Loading window (7s) + Music Player
+-- // Loading + Music Player + Saved Songs + B-Ball toggle
+-- // Each saved row: ▶ Play · ■ Stop · × Delete
 -- // ============================================
 
--- // Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -42,6 +43,37 @@ end
 -- // Constants
 local DEFAULT_VOLUME = 0.5
 local LOAD_TIME = 7
+local SAVE_FILE = "BaconHub_songs.json"
+
+-- // ============ SAVED SONGS (PERSISTENT) ============
+local savedSongs = {}
+
+local function hasFileIO()
+    return typeof(writefile) == "function"
+       and typeof(readfile) == "function"
+       and typeof(isfile) == "function"
+end
+
+local function loadSavedSongs()
+    if not hasFileIO() then return end
+    local ok, data = pcall(function()
+        if isfile(SAVE_FILE) then
+            return HttpService:JSONDecode(readfile(SAVE_FILE))
+        end
+    end)
+    if ok and type(data) == "table" then
+        savedSongs = data
+    end
+end
+
+local function saveSongsToDisk()
+    if not hasFileIO() then return end
+    pcall(function()
+        writefile(SAVE_FILE, HttpService:JSONEncode(savedSongs))
+    end)
+end
+
+loadSavedSongs()
 
 -- ============================================
 -- // LOADING WINDOW
@@ -53,18 +85,14 @@ loadingGui.IgnoreGuiInset = true
 loadingGui.DisplayOrder = 999
 loadingGui.Parent = playerGui
 
--- Subtle dark overlay
 local darkOverlay = Instance.new("Frame")
-darkOverlay.Name = "DarkOverlay"
 darkOverlay.Size = UDim2.new(1, 0, 1, 0)
 darkOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 darkOverlay.BackgroundTransparency = 0.55
 darkOverlay.BorderSizePixel = 0
 darkOverlay.Parent = loadingGui
 
--- Center loading window
 local loadFrame = Instance.new("Frame")
-loadFrame.Name = "LoadFrame"
 loadFrame.Size = UDim2.new(0, 460, 0, 140)
 loadFrame.Position = UDim2.new(0.5, -230, 0.5, -70)
 loadFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
@@ -72,9 +100,7 @@ loadFrame.BorderSizePixel = 0
 loadFrame.ZIndex = 2
 loadFrame.Parent = loadingGui
 
-local loadCorner = Instance.new("UICorner")
-loadCorner.CornerRadius = UDim.new(0, 18)
-loadCorner.Parent = loadFrame
+Instance.new("UICorner", loadFrame).CornerRadius = UDim.new(0, 18)
 
 local loadStroke = Instance.new("UIStroke")
 loadStroke.Color = Color3.fromRGB(55, 55, 55)
@@ -89,9 +115,7 @@ loadGradient.Color = ColorSequence.new{
 loadGradient.Rotation = 45
 loadGradient.Parent = loadFrame
 
--- Title
 local loadTitle = Instance.new("TextLabel")
-loadTitle.Name = "LoadTitle"
 loadTitle.Size = UDim2.new(1, -40, 0, 40)
 loadTitle.Position = UDim2.new(0, 20, 0, 18)
 loadTitle.BackgroundTransparency = 1
@@ -99,13 +123,10 @@ loadTitle.Text = "Bacon Hub"
 loadTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 loadTitle.TextSize = 34
 loadTitle.Font = Enum.Font.GothamBold
-loadTitle.TextXAlignment = Enum.TextXAlignment.Center
 loadTitle.ZIndex = 3
 loadTitle.Parent = loadFrame
 
--- Subtitle
 local loadSub = Instance.new("TextLabel")
-loadSub.Name = "LoadSub"
 loadSub.Size = UDim2.new(1, -40, 0, 20)
 loadSub.Position = UDim2.new(0, 20, 0, 58)
 loadSub.BackgroundTransparency = 1
@@ -113,13 +134,10 @@ loadSub.Text = "Loading... 0%"
 loadSub.TextColor3 = Color3.fromRGB(170, 170, 170)
 loadSub.TextSize = 14
 loadSub.Font = Enum.Font.Gotham
-loadSub.TextXAlignment = Enum.TextXAlignment.Center
 loadSub.ZIndex = 3
 loadSub.Parent = loadFrame
 
--- Progress bar background
 local barBg = Instance.new("Frame")
-barBg.Name = "BarBg"
 barBg.Size = UDim2.new(1, -60, 0, 16)
 barBg.Position = UDim2.new(0, 30, 0, 92)
 barBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -127,59 +145,40 @@ barBg.BorderSizePixel = 0
 barBg.ZIndex = 3
 barBg.Parent = loadFrame
 
-local barBgCorner = Instance.new("UICorner")
-barBgCorner.CornerRadius = UDim.new(1, 0)
-barBgCorner.Parent = barBg
+Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
 
--- Green fill
 local barFill = Instance.new("Frame")
-barFill.Name = "BarFill"
 barFill.Size = UDim2.new(0, 0, 1, 0)
 barFill.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
 barFill.BorderSizePixel = 0
 barFill.ZIndex = 4
 barFill.Parent = barBg
 
-local barFillCorner = Instance.new("UICorner")
-barFillCorner.CornerRadius = UDim.new(1, 0)
-barFillCorner.Parent = barFill
+Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
 
 local barFillGradient = Instance.new("UIGradient")
 barFillGradient.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 200, 90)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 255, 140)),
 }
-barFillGradient.Rotation = 0
 barFillGradient.Parent = barFill
 
--- // ============ ANIMATION ============
 local startTime = tick()
 local finished = false
-
 local conn
 conn = RunService.RenderStepped:Connect(function()
     if finished then return end
-    local elapsed = tick() - startTime
-    local alpha = math.clamp(elapsed / LOAD_TIME, 0, 1)
-    local percent = math.floor(alpha * 100 + 0.5)
-
+    local alpha = math.clamp((tick() - startTime) / LOAD_TIME, 0, 1)
     barFill.Size = UDim2.new(alpha, 0, 1, 0)
-    loadSub.Text = "Loading... " .. percent .. "%"
-
+    loadSub.Text = "Loading... " .. math.floor(alpha * 100 + 0.5) .. "%"
     if alpha >= 1 then
         finished = true
         conn:Disconnect()
-        -- Instant disappear (no fade, no wait)
         loadingGui:Destroy()
     end
 end)
 
--- ============================================
--- // WAIT FOR LOADING TO FINISH
--- ============================================
-while not finished do
-    task.wait(0.05)
-end
+while not finished do task.wait(0.05) end
 
 -- ============================================
 -- // MUSIC PLAYER
@@ -190,20 +189,27 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- // ============ MAIN FRAME ============
+-- ============ SOUND (early for stop buttons) ============
+local sound = Instance.new("Sound")
+sound.Name = "MusicSound"
+sound.Volume = DEFAULT_VOLUME
+sound.Looped = true
+sound.Parent = SoundService
+
+local isPlaying = false
+
+-- ============ MAIN FRAME ============
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "BaconPlayer"
-mainFrame.Size = UDim2.new(0, 420, 0, 280)
-mainFrame.Position = UDim2.new(0.5, -210, 0.5, -140)
+mainFrame.Size = UDim2.new(0, 420, 0, 330)
+mainFrame.Position = UDim2.new(0.5, -350, 0.5, -165)
 mainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = false
-mainFrame.Draggable = false
+mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 18)
-mainCorner.Parent = mainFrame
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 18)
 
 local mainStroke = Instance.new("UIStroke")
 mainStroke.Color = Color3.fromRGB(55, 55, 55)
@@ -218,21 +224,16 @@ mainGradient.Color = ColorSequence.new{
 mainGradient.Rotation = 45
 mainGradient.Parent = mainFrame
 
--- // ============ DRAG HEADER ============
+-- ============ DRAG HEADER ============
 local dragBar = Instance.new("Frame")
 dragBar.Name = "DragBar"
-dragBar.Size = UDim2.new(1, -50, 0, 56)   -- leave space for X button
+dragBar.Size = UDim2.new(1, -50, 0, 56)
 dragBar.Position = UDim2.new(0, 0, 0, 0)
 dragBar.BackgroundTransparency = 1
 dragBar.Active = true
 dragBar.Parent = mainFrame
 
-local dragBarCorner = Instance.new("UICorner")
-dragBarCorner.CornerRadius = UDim.new(0, 18)
-dragBarCorner.Parent = dragBar
-
 local title = Instance.new("TextLabel")
-title.Name = "Title"
 title.Size = UDim2.new(1, -20, 0, 32)
 title.Position = UDim2.new(0, 20, 0, 12)
 title.BackgroundTransparency = 1
@@ -250,9 +251,8 @@ divider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 divider.BorderSizePixel = 0
 divider.Parent = dragBar
 
--- // ============ CLOSE BUTTON (×) ============
+-- ============ CLOSE (×) ============
 local closeButton = Instance.new("TextButton")
-closeButton.Name = "CloseButton"
 closeButton.Size = UDim2.new(0, 32, 0, 32)
 closeButton.Position = UDim2.new(1, -42, 0, 12)
 closeButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -262,31 +262,13 @@ closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeButton.TextSize = 24
 closeButton.Font = Enum.Font.GothamBold
 closeButton.AutoButtonColor = false
-closeButton.Active = true
 closeButton.ZIndex = 5
 closeButton.Parent = mainFrame
+Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 8)
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
-closeCorner.Parent = closeButton
-
-closeButton.MouseEnter:Connect(function()
-    closeButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-end)
-closeButton.MouseLeave:Connect(function()
-    closeButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-end)
-
-closeButton.MouseButton1Click:Connect(function()
-    -- Stop music and destroy the whole GUI
-    local snd = SoundService:FindFirstChild("MusicSound")
-    if snd then snd:Stop() end
-    screenGui:Destroy()
-end)
-
--- // ============ ID LABEL ============
+-- ============ ID LABEL + SAVE ============
 local idLabel = Instance.new("TextLabel")
-idLabel.Size = UDim2.new(1, -40, 0, 18)
+idLabel.Size = UDim2.new(1, -100, 0, 18)
 idLabel.Position = UDim2.new(0, 20, 0, 68)
 idLabel.BackgroundTransparency = 1
 idLabel.Text = "Song ID"
@@ -296,9 +278,24 @@ idLabel.Font = Enum.Font.Gotham
 idLabel.TextXAlignment = Enum.TextXAlignment.Left
 idLabel.Parent = mainFrame
 
--- // ============ ID TEXTBOX ============
+local saveIdButton = Instance.new("TextButton")
+saveIdButton.Size = UDim2.new(0, 76, 0, 22)
+saveIdButton.Position = UDim2.new(1, -96, 0, 66)
+saveIdButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+saveIdButton.BorderSizePixel = 0
+saveIdButton.Text = "★ Save"
+saveIdButton.TextColor3 = Color3.fromRGB(255, 220, 80)
+saveIdButton.TextSize = 12
+saveIdButton.Font = Enum.Font.GothamBold
+saveIdButton.AutoButtonColor = false
+saveIdButton.ZIndex = 5
+saveIdButton.Parent = mainFrame
+Instance.new("UICorner", saveIdButton).CornerRadius = UDim.new(0, 6)
+saveIdButton.MouseEnter:Connect(function() saveIdButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55) end)
+saveIdButton.MouseLeave:Connect(function() saveIdButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35) end)
+
+-- ============ ID TEXTBOX ============
 local idBox = Instance.new("TextBox")
-idBox.Name = "IdBox"
 idBox.Size = UDim2.new(1, -40, 0, 42)
 idBox.Position = UDim2.new(0, 20, 0, 90)
 idBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
@@ -313,10 +310,7 @@ idBox.ClearTextOnFocus = false
 idBox.TextXAlignment = Enum.TextXAlignment.Left
 idBox.Active = true
 idBox.Parent = mainFrame
-
-local idBoxCorner = Instance.new("UICorner")
-idBoxCorner.CornerRadius = UDim.new(0, 10)
-idBoxCorner.Parent = idBox
+Instance.new("UICorner", idBox).CornerRadius = UDim.new(0, 10)
 
 local idBoxStroke = Instance.new("UIStroke")
 idBoxStroke.Color = Color3.fromRGB(45, 45, 45)
@@ -327,16 +321,11 @@ local idBoxPadding = Instance.new("UIPadding")
 idBoxPadding.PaddingLeft = UDim.new(0, 12)
 idBoxPadding.Parent = idBox
 
-idBox.Focused:Connect(function()
-    idBoxStroke.Color = Color3.fromRGB(30, 200, 90)
-end)
-idBox.FocusLost:Connect(function()
-    idBoxStroke.Color = Color3.fromRGB(45, 45, 45)
-end)
+idBox.Focused:Connect(function() idBoxStroke.Color = Color3.fromRGB(30, 200, 90) end)
+idBox.FocusLost:Connect(function() idBoxStroke.Color = Color3.fromRGB(45, 45, 45) end)
 
--- // ============ PLAY BUTTON ============
+-- ============ PLAY BUTTON ============
 local playButton = Instance.new("TextButton")
-playButton.Name = "PlayButton"
 playButton.Size = UDim2.new(1, -40, 0, 44)
 playButton.Position = UDim2.new(0, 20, 0, 148)
 playButton.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
@@ -346,17 +335,13 @@ playButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 playButton.TextSize = 17
 playButton.Font = Enum.Font.GothamBold
 playButton.AutoButtonColor = false
-playButton.Active = true
 playButton.Parent = mainFrame
+Instance.new("UICorner", playButton).CornerRadius = UDim.new(0, 10)
 
-local playCorner = Instance.new("UICorner")
-playCorner.CornerRadius = UDim.new(0, 10)
-playCorner.Parent = playButton
-
--- // ============ VOLUME SECTION ============
+-- ============ VOLUME SECTION ============
 local volumeLabel = Instance.new("TextLabel")
 volumeLabel.Size = UDim2.new(1, -40, 0, 18)
-volumeLabel.Position = UDim2.new(0, 20, 0, 205)
+volumeLabel.Position = UDim2.new(0, 20, 0, 208)
 volumeLabel.BackgroundTransparency = 1
 volumeLabel.Text = "Volume"
 volumeLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
@@ -366,22 +351,19 @@ volumeLabel.TextXAlignment = Enum.TextXAlignment.Left
 volumeLabel.Parent = mainFrame
 
 local volumeText = Instance.new("TextLabel")
-volumeText.Name = "VolumeText"
 volumeText.Size = UDim2.new(0, 60, 0, 18)
-volumeText.Position = UDim2.new(1, -80, 0, 205)
+volumeText.Position = UDim2.new(1, -80, 0, 208)
 volumeText.BackgroundTransparency = 1
-volumeText.Text = math.floor(DEFAULT_VOLUME * 100) .. "%"
+volumeText.Text = "50%"
 volumeText.TextColor3 = Color3.fromRGB(255, 255, 255)
 volumeText.TextSize = 14
 volumeText.Font = Enum.Font.GothamBold
 volumeText.TextXAlignment = Enum.TextXAlignment.Right
 volumeText.Parent = mainFrame
 
--- Minus
 local minusButton = Instance.new("TextButton")
-minusButton.Name = "MinusButton"
 minusButton.Size = UDim2.new(0, 36, 0, 36)
-minusButton.Position = UDim2.new(0, 20, 0, 226)
+minusButton.Position = UDim2.new(0, 20, 0, 228)
 minusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 minusButton.BorderSizePixel = 0
 minusButton.Text = "−"
@@ -389,18 +371,12 @@ minusButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 minusButton.TextSize = 22
 minusButton.Font = Enum.Font.GothamBold
 minusButton.AutoButtonColor = false
-minusButton.Active = true
 minusButton.Parent = mainFrame
+Instance.new("UICorner", minusButton).CornerRadius = UDim.new(0, 8)
 
-local minusCorner = Instance.new("UICorner")
-minusCorner.CornerRadius = UDim.new(0, 8)
-minusCorner.Parent = minusButton
-
--- Plus
 local plusButton = Instance.new("TextButton")
-plusButton.Name = "PlusButton"
 plusButton.Size = UDim2.new(0, 36, 0, 36)
-plusButton.Position = UDim2.new(1, -56, 0, 226)
+plusButton.Position = UDim2.new(1, -56, 0, 228)
 plusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 plusButton.BorderSizePixel = 0
 plusButton.Text = "+"
@@ -408,61 +384,38 @@ plusButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 plusButton.TextSize = 20
 plusButton.Font = Enum.Font.GothamBold
 plusButton.AutoButtonColor = false
-plusButton.Active = true
 plusButton.Parent = mainFrame
+Instance.new("UICorner", plusButton).CornerRadius = UDim.new(0, 8)
 
-local plusCorner = Instance.new("UICorner")
-plusCorner.CornerRadius = UDim.new(0, 8)
-plusCorner.Parent = plusButton
-
--- Slider background
 local sliderBg = Instance.new("Frame")
-sliderBg.Name = "SliderBg"
 sliderBg.Size = UDim2.new(1, -132, 0, 14)
-sliderBg.Position = UDim2.new(0, 66, 0, 237)
+sliderBg.Position = UDim2.new(0, 66, 0, 239)
 sliderBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 sliderBg.BorderSizePixel = 0
 sliderBg.Active = true
 sliderBg.Parent = mainFrame
+Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1, 0)
 
-local sliderBgCorner = Instance.new("UICorner")
-sliderBgCorner.CornerRadius = UDim.new(1, 0)
-sliderBgCorner.Parent = sliderBg
-
--- Slider fill
 local sliderFill = Instance.new("Frame")
-sliderFill.Name = "SliderFill"
 sliderFill.Size = UDim2.new(DEFAULT_VOLUME, 0, 1, 0)
 sliderFill.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
 sliderFill.BorderSizePixel = 0
-sliderFill.Active = false
 sliderFill.Parent = sliderBg
+Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1, 0)
 
-local sliderFillCorner = Instance.new("UICorner")
-sliderFillCorner.CornerRadius = UDim.new(1, 0)
-sliderFillCorner.Parent = sliderFill
-
--- Slider knob
 local sliderKnob = Instance.new("Frame")
-sliderKnob.Name = "Knob"
 sliderKnob.Size = UDim2.new(0, 20, 0, 20)
 sliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
 sliderKnob.Position = UDim2.new(DEFAULT_VOLUME, 0, 0.5, 0)
 sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 sliderKnob.BorderSizePixel = 0
 sliderKnob.ZIndex = 2
-sliderKnob.Active = false
 sliderKnob.Parent = sliderBg
+Instance.new("UICorner", sliderKnob).CornerRadius = UDim.new(1, 0)
 
-local sliderKnobCorner = Instance.new("UICorner")
-sliderKnobCorner.CornerRadius = UDim.new(1, 0)
-sliderKnobCorner.Parent = sliderKnob
-
--- Slider hit area
 local sliderHit = Instance.new("TextButton")
-sliderHit.Name = "SliderHit"
 sliderHit.Size = UDim2.new(1, -132, 0, 28)
-sliderHit.Position = UDim2.new(0, 66, 0, 230)
+sliderHit.Position = UDim2.new(0, 66, 0, 232)
 sliderHit.BackgroundTransparency = 1
 sliderHit.Text = ""
 sliderHit.AutoButtonColor = false
@@ -470,28 +423,263 @@ sliderHit.Active = true
 sliderHit.ZIndex = 5
 sliderHit.Parent = mainFrame
 
--- // ============ SOUND ============
-local sound = Instance.new("Sound")
-sound.Name = "MusicSound"
-sound.Volume = DEFAULT_VOLUME
-sound.Looped = true
-sound.Parent = SoundService
+-- ============ SAVED SONGS TOGGLE ============
+local savedToggleBtn = Instance.new("TextButton")
+savedToggleBtn.Size = UDim2.new(1, -40, 0, 40)
+savedToggleBtn.Position = UDim2.new(0, 20, 0, 278)
+savedToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+savedToggleBtn.BorderSizePixel = 0
+savedToggleBtn.Text = "★ Saved Songs"
+savedToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+savedToggleBtn.TextSize = 15
+savedToggleBtn.Font = Enum.Font.GothamBold
+savedToggleBtn.AutoButtonColor = false
+savedToggleBtn.ZIndex = 5
+savedToggleBtn.Parent = mainFrame
+Instance.new("UICorner", savedToggleBtn).CornerRadius = UDim.new(0, 10)
 
--- // ============ VOLUME LOGIC ============
+savedToggleBtn.MouseEnter:Connect(function() savedToggleBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65) end)
+savedToggleBtn.MouseLeave:Connect(function() savedToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45) end)
+
+-- ============ SAVED SONGS PANEL ============
+local savedPanel = Instance.new("Frame")
+savedPanel.Name = "SavedPanel"
+savedPanel.Size = UDim2.new(0, 340, 0, 330)
+savedPanel.Position = UDim2.new(0, 440, 0, 0)
+savedPanel.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+savedPanel.BorderSizePixel = 0
+savedPanel.Visible = false
+savedPanel.ZIndex = 2
+savedPanel.Parent = screenGui
+Instance.new("UICorner", savedPanel).CornerRadius = UDim.new(0, 18)
+
+local panelStroke = Instance.new("UIStroke")
+panelStroke.Color = Color3.fromRGB(55, 55, 55)
+panelStroke.Thickness = 2
+panelStroke.Parent = savedPanel
+
+local panelGradient = Instance.new("UIGradient")
+panelGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 28, 28)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 8)),
+}
+panelGradient.Rotation = 45
+panelGradient.Parent = savedPanel
+
+local savedTitle = Instance.new("TextLabel")
+savedTitle.Size = UDim2.new(1, -90, 0, 32)
+savedTitle.Position = UDim2.new(0, 20, 0, 15)
+savedTitle.BackgroundTransparency = 1
+savedTitle.Text = "★ Saved Songs"
+savedTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+savedTitle.TextSize = 20
+savedTitle.Font = Enum.Font.GothamBold
+savedTitle.TextXAlignment = Enum.TextXAlignment.Left
+savedTitle.Parent = savedPanel
+
+-- ============ RED SQUARE STOP BUTTON (panel header) ============
+local panelStopBtn = Instance.new("TextButton")
+panelStopBtn.Name = "PanelStopButton"
+panelStopBtn.Size = UDim2.new(0, 26, 0, 26)
+panelStopBtn.Position = UDim2.new(1, -46, 0, 18)
+panelStopBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+panelStopBtn.BorderSizePixel = 0
+panelStopBtn.Text = "■"
+panelStopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+panelStopBtn.TextSize = 14
+panelStopBtn.Font = Enum.Font.GothamBold
+panelStopBtn.AutoButtonColor = false
+panelStopBtn.ZIndex = 5
+panelStopBtn.Parent = savedPanel
+
+Instance.new("UICorner", panelStopBtn).CornerRadius = UDim.new(0, 6)
+
+panelStopBtn.MouseEnter:Connect(function() panelStopBtn.BackgroundColor3 = Color3.fromRGB(240, 70, 70) end)
+panelStopBtn.MouseLeave:Connect(function() panelStopBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50) end)
+
+panelStopBtn.MouseButton1Click:Connect(function()
+    sound:Stop()
+    isPlaying = false
+    playButton.Text = "Play"
+    playButton.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+    idBox.PlaceholderText = "Enter song ID..."
+end)
+
+local savedDivider = Instance.new("Frame")
+savedDivider.Size = UDim2.new(1, -40, 0, 1)
+savedDivider.Position = UDim2.new(0, 20, 0, 55)
+savedDivider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+savedDivider.BorderSizePixel = 0
+savedDivider.Parent = savedPanel
+
+local savedCount = Instance.new("TextLabel")
+savedCount.Size = UDim2.new(1, -40, 0, 16)
+savedCount.Position = UDim2.new(0, 20, 0, 62)
+savedCount.BackgroundTransparency = 1
+savedCount.Text = "0 songs"
+savedCount.TextColor3 = Color3.fromRGB(160, 160, 160)
+savedCount.TextSize = 12
+savedCount.Font = Enum.Font.Gotham
+savedCount.TextXAlignment = Enum.TextXAlignment.Left
+savedCount.Parent = savedPanel
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -40, 1, -110)
+scroll.Position = UDim2.new(0, 20, 0, 86)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 5
+scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.Parent = savedPanel
+
+local scrollLayout = Instance.new("UIListLayout")
+scrollLayout.Padding = UDim.new(0, 8)
+scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+scrollLayout.Parent = scroll
+
+local emptyLabel = Instance.new("TextLabel")
+emptyLabel.Size = UDim2.new(1, 0, 0, 40)
+emptyLabel.BackgroundTransparency = 1
+emptyLabel.Text = "No saved songs yet.\nUse ★ Save to add one."
+emptyLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+emptyLabel.TextSize = 13
+emptyLabel.Font = Enum.Font.Gotham
+emptyLabel.TextWrapped = true
+emptyLabel.Parent = scroll
+
+-- ============================================
+-- // ⚫ FLOATING "B" BALL TOGGLE
+-- // White "B" with BLACK outline
+-- ============================================
+local ballButton = Instance.new("TextButton")
+ballButton.Name = "BaconBall"
+ballButton.Size = UDim2.new(0, 60, 0, 60)
+ballButton.Position = UDim2.new(0, 40, 0.5, -30)
+ballButton.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+ballButton.BorderSizePixel = 0
+ballButton.Text = ""
+ballButton.AutoButtonColor = false
+ballButton.Active = true
+ballButton.ZIndex = 10
+ballButton.Parent = screenGui
+
+Instance.new("UICorner", ballButton).CornerRadius = UDim.new(1, 0)
+
+local ballStroke = Instance.new("UIStroke")
+ballStroke.Color = Color3.fromRGB(60, 60, 60)
+ballStroke.Thickness = 2
+ballStroke.Parent = ballButton
+
+local ballGradient = Instance.new("UIGradient")
+ballGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 35)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+}
+ballGradient.Rotation = 45
+ballGradient.Parent = ballButton
+
+local ballLabel = Instance.new("TextLabel")
+ballLabel.Name = "BLabel"
+ballLabel.Size = UDim2.new(1, 0, 1, 0)
+ballLabel.BackgroundTransparency = 1
+ballLabel.Text = "B"
+ballLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ballLabel.TextSize = 30
+ballLabel.Font = Enum.Font.GothamBlack
+ballLabel.TextXAlignment = Enum.TextXAlignment.Center
+ballLabel.TextYAlignment = Enum.TextYAlignment.Center
+ballLabel.ZIndex = 11
+ballLabel.Active = false
+ballLabel.Parent = ballButton
+
+local textStroke = Instance.new("UIStroke")
+textStroke.Color = Color3.fromRGB(0, 0, 0)
+textStroke.Thickness = 2
+textStroke.Transparency = 0
+textStroke.Parent = ballLabel
+
+ballButton.MouseEnter:Connect(function()
+    TweenService:Create(ballButton, TweenInfo.new(0.15), { Size = UDim2.new(0, 66, 0, 66) }):Play()
+    ballStroke.Color = Color3.fromRGB(30, 200, 90)
+end)
+ballButton.MouseLeave:Connect(function()
+    TweenService:Create(ballButton, TweenInfo.new(0.15), { Size = UDim2.new(0, 60, 0, 60) }):Play()
+    ballStroke.Color = Color3.fromRGB(60, 60, 60)
+end)
+ballButton.MouseButton1Down:Connect(function()
+    ballButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+end)
+ballButton.MouseButton1Up:Connect(function()
+    ballButton.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+end)
+
+-- ============ BALL DRAG ============
+local draggingBall = false
+local ballDragOffset = Vector2.new(0, 0)
+local ballMoved = false
+local ballPressStart = Vector2.new(0, 0)
+
+ballButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        draggingBall = true
+        ballMoved = false
+        ballPressStart = Vector2.new(input.Position.X, input.Position.Y)
+        ballDragOffset = Vector2.new(
+            input.Position.X - ballButton.AbsolutePosition.X,
+            input.Position.Y - ballButton.AbsolutePosition.Y
+        )
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingBall and (input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch) then
+        local dx = math.abs(input.Position.X - ballPressStart.X)
+        local dy = math.abs(input.Position.Y - ballPressStart.Y)
+        if dx > 4 or dy > 4 then ballMoved = true end
+
+        ballButton.Position = UDim2.new(
+            0, input.Position.X - ballDragOffset.X,
+            0, input.Position.Y - ballDragOffset.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        draggingBall = false
+    end
+end)
+
+-- ============ TOGGLE MENU ============
+local function setMenuVisible(state)
+    mainFrame.Visible = state
+    savedPanel.Visible = false
+end
+
+ballButton.MouseButton1Click:Connect(function()
+    if ballMoved then
+        ballMoved = false
+        return
+    end
+    setMenuVisible(not mainFrame.Visible)
+end)
+
+-- ============ VOLUME ============
 local currentVolume = DEFAULT_VOLUME
 
 local function updateVolumeUI()
-    local percent = math.floor(currentVolume * 100)
-    volumeText.Text = percent .. "%"
-
+    volumeText.Text = math.floor(currentVolume * 100) .. "%"
     TweenService:Create(sliderFill, TweenInfo.new(0.1), {
         Size = UDim2.new(currentVolume, 0, 1, 0)
     }):Play()
-
     TweenService:Create(sliderKnob, TweenInfo.new(0.1), {
         Position = UDim2.new(currentVolume, 0, 0.5, 0)
     }):Play()
-
     if currentVolume <= 0.01 then
         sliderFill.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
     elseif currentVolume < 0.3 then
@@ -507,7 +695,6 @@ local function setVolume(value)
     updateVolumeUI()
 end
 
--- // ============ SLIDER DRAG ============
 local sliderDragging = false
 
 local function setVolumeFromX(mouseX)
@@ -516,30 +703,25 @@ local function setVolumeFromX(mouseX)
 end
 
 sliderHit.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         sliderDragging = true
         setVolumeFromX(input.Position.X)
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if sliderDragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch) then
+    if sliderDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         setVolumeFromX(input.Position.X)
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         sliderDragging = false
     end
 end)
 
--- // ============ PLAY / STOP ============
-local isPlaying = false
-
+-- ============ PLAY / STOP ============
 local function playMusic()
     if isPlaying then
         sound:Stop()
@@ -549,7 +731,6 @@ local function playMusic()
         idBox.PlaceholderText = "Enter song ID..."
         return
     end
-
     local id = tonumber(idBox.Text)
     if not id then
         idBox.PlaceholderText = "❌ Invalid ID!"
@@ -558,68 +739,193 @@ local function playMusic()
         idBox.PlaceholderText = "Enter song ID..."
         return
     end
-
     sound:Stop()
     sound.SoundId = "rbxassetid://" .. id
     sound:Play()
     isPlaying = true
-
     playButton.Text = "Stop"
     playButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
     idBox.PlaceholderText = "Now playing: " .. id
 end
 
--- // ============ BUTTON EVENTS ============
 playButton.MouseEnter:Connect(function()
-    if not isPlaying then
-        playButton.BackgroundColor3 = Color3.fromRGB(50, 230, 110)
-    else
-        playButton.BackgroundColor3 = Color3.fromRGB(240, 70, 70)
-    end
+    playButton.BackgroundColor3 = isPlaying and Color3.fromRGB(240, 70, 70) or Color3.fromRGB(50, 230, 110)
 end)
 playButton.MouseLeave:Connect(function()
-    if not isPlaying then
-        playButton.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
-    else
-        playButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-    end
+    playButton.BackgroundColor3 = isPlaying and Color3.fromRGB(220, 50, 50) or Color3.fromRGB(30, 200, 90)
 end)
 playButton.MouseButton1Click:Connect(playMusic)
 
-minusButton.MouseEnter:Connect(function()
-    minusButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-end)
-minusButton.MouseLeave:Connect(function()
-    minusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-end)
-minusButton.MouseButton1Click:Connect(function()
-    setVolume(currentVolume - 0.1)
-end)
+minusButton.MouseEnter:Connect(function() minusButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55) end)
+minusButton.MouseLeave:Connect(function() minusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35) end)
+minusButton.MouseButton1Click:Connect(function() setVolume(currentVolume - 0.1) end)
 
-plusButton.MouseEnter:Connect(function()
-    plusButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-end)
-plusButton.MouseLeave:Connect(function()
-    plusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-end)
-plusButton.MouseButton1Click:Connect(function()
-    setVolume(currentVolume + 0.1)
-end)
+plusButton.MouseEnter:Connect(function() plusButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55) end)
+plusButton.MouseLeave:Connect(function() plusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35) end)
+plusButton.MouseButton1Click:Connect(function() setVolume(currentVolume + 0.1) end)
 
--- // ============ ENTER IN TEXTBOX ============
 idBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        playMusic()
+    if enterPressed then playMusic() end
+end)
+
+-- ============ SAVED SONGS LOGIC ============
+local function refreshSavedList()
+    for _, child in ipairs(scroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+
+    savedCount.Text = #savedSongs .. " song" .. (#savedSongs == 1 and "" or "s")
+    emptyLabel.Visible = (#savedSongs == 0)
+
+    for i, entry in ipairs(savedSongs) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, -10, 0, 44)
+        row.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
+        row.BorderSizePixel = 0
+        row.LayoutOrder = i
+        row.Parent = scroll
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+
+        local rowStroke = Instance.new("UIStroke")
+        rowStroke.Color = Color3.fromRGB(42, 42, 42)
+        rowStroke.Thickness = 1
+        rowStroke.Parent = row
+
+        local nameLbl = Instance.new("TextLabel")
+        nameLbl.Size = UDim2.new(1, -130, 0, 18)
+        nameLbl.Position = UDim2.new(0, 10, 0, 4)
+        nameLbl.BackgroundTransparency = 1
+        nameLbl.Text = entry.name or ("Song " .. entry.id)
+        nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLbl.TextSize = 13
+        nameLbl.Font = Enum.Font.GothamBold
+        nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+        nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+        nameLbl.Parent = row
+
+        local idLbl = Instance.new("TextLabel")
+        idLbl.Size = UDim2.new(1, -130, 0, 16)
+        idLbl.Position = UDim2.new(0, 10, 0, 22)
+        idLbl.BackgroundTransparency = 1
+        idLbl.Text = "ID: " .. entry.id
+        idLbl.TextColor3 = Color3.fromRGB(140, 140, 140)
+        idLbl.TextSize = 11
+        idLbl.Font = Enum.Font.Gotham
+        idLbl.TextXAlignment = Enum.TextXAlignment.Left
+        idLbl.Parent = row
+
+        -- ▶ PLAY (green)
+        local playEntry = Instance.new("TextButton")
+        playEntry.Size = UDim2.new(0, 32, 0, 32)
+        playEntry.Position = UDim2.new(1, -116, 0.5, -16)
+        playEntry.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+        playEntry.BorderSizePixel = 0
+        playEntry.Text = "▶"
+        playEntry.TextColor3 = Color3.fromRGB(255, 255, 255)
+        playEntry.TextSize = 13
+        playEntry.Font = Enum.Font.GothamBold
+        playEntry.AutoButtonColor = false
+        playEntry.Parent = row
+        Instance.new("UICorner", playEntry).CornerRadius = UDim.new(0, 7)
+
+        playEntry.MouseEnter:Connect(function() playEntry.BackgroundColor3 = Color3.fromRGB(50, 230, 110) end)
+        playEntry.MouseLeave:Connect(function() playEntry.BackgroundColor3 = Color3.fromRGB(30, 200, 90) end)
+
+        playEntry.MouseButton1Click:Connect(function()
+            idBox.Text = tostring(entry.id)
+            if isPlaying then isPlaying = false end
+            playMusic()
+        end)
+
+        -- ■ STOP (red) — right next to play arrow
+        local stopEntry = Instance.new("TextButton")
+        stopEntry.Size = UDim2.new(0, 32, 0, 32)
+        stopEntry.Position = UDim2.new(1, -78, 0.5, -16)
+        stopEntry.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+        stopEntry.BorderSizePixel = 0
+        stopEntry.Text = "■"
+        stopEntry.TextColor3 = Color3.fromRGB(255, 255, 255)
+        stopEntry.TextSize = 12
+        stopEntry.Font = Enum.Font.GothamBold
+        stopEntry.AutoButtonColor = false
+        stopEntry.Parent = row
+        Instance.new("UICorner", stopEntry).CornerRadius = UDim.new(0, 7)
+
+        stopEntry.MouseEnter:Connect(function() stopEntry.BackgroundColor3 = Color3.fromRGB(240, 70, 70) end)
+        stopEntry.MouseLeave:Connect(function() stopEntry.BackgroundColor3 = Color3.fromRGB(220, 50, 50) end)
+
+        stopEntry.MouseButton1Click:Connect(function()
+            sound:Stop()
+            isPlaying = false
+            playButton.Text = "Play"
+            playButton.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+            idBox.PlaceholderText = "Enter song ID..."
+        end)
+
+        -- × DELETE (gray)
+        local delBtn = Instance.new("TextButton")
+        delBtn.Size = UDim2.new(0, 32, 0, 32)
+        delBtn.Position = UDim2.new(1, -40, 0.5, -16)
+        delBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        delBtn.BorderSizePixel = 0
+        delBtn.Text = "×"
+        delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        delBtn.TextSize = 18
+        delBtn.Font = Enum.Font.GothamBold
+        delBtn.AutoButtonColor = false
+        delBtn.Parent = row
+        Instance.new("UICorner", delBtn).CornerRadius = UDim.new(0, 7)
+
+        delBtn.MouseEnter:Connect(function() delBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50) end)
+        delBtn.MouseLeave:Connect(function() delBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35) end)
+
+        delBtn.MouseButton1Click:Connect(function()
+            table.remove(savedSongs, i)
+            saveSongsToDisk()
+            refreshSavedList()
+        end)
+    end
+end
+
+saveIdButton.MouseButton1Click:Connect(function()
+    local id = tonumber(idBox.Text)
+    if not id then
+        idBox.PlaceholderText = "❌ Enter an ID first!"
+        idBox.Text = ""
+        task.wait(1.5)
+        idBox.PlaceholderText = "Enter song ID..."
+        return
+    end
+    for _, e in ipairs(savedSongs) do
+        if e.id == id then
+            saveIdButton.Text = "★ Already!"
+            task.wait(1.2)
+            saveIdButton.Text = "★ Save"
+            return
+        end
+    end
+    table.insert(savedSongs, { id = id, name = "Song " .. id })
+    saveSongsToDisk()
+    refreshSavedList()
+    saveIdButton.Text = "★ Saved!"
+    task.wait(1.2)
+    saveIdButton.Text = "★ Save"
+end)
+
+savedToggleBtn.MouseButton1Click:Connect(function()
+    savedPanel.Visible = not savedPanel.Visible
+    if savedPanel.Visible then
+        savedPanel.Position = UDim2.new(0, mainFrame.Position.X.Offset + 440, 0, mainFrame.Position.Y.Offset)
+        refreshSavedList()
     end
 end)
 
--- // ============ WINDOW DRAG VIA HEADER ============
+-- ============ WINDOW DRAG ============
 local draggingWindow = false
 local dragOffset = Vector2.new(0, 0)
 
 dragBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingWindow = true
         dragOffset = Vector2.new(
             input.Position.X - mainFrame.AbsolutePosition.X,
@@ -629,30 +935,54 @@ dragBar.InputBegan:Connect(function(input)
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if draggingWindow and (input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch) then
-        mainFrame.Position = UDim2.new(
-            0, input.Position.X - dragOffset.X,
-            0, input.Position.Y - dragOffset.Y
-        )
+    if draggingWindow and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        mainFrame.Position = UDim2.new(0, input.Position.X - dragOffset.X, 0, input.Position.Y - dragOffset.Y)
+        if savedPanel.Visible then
+            savedPanel.Position = UDim2.new(0, mainFrame.Position.X.Offset + 440, 0, mainFrame.Position.Y.Offset)
+        end
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingWindow = false
     end
 end)
 
--- // ============ HOTKEY: M ============
+-- ============ CLOSE (×) — FULLY CLOSES EVERYTHING ============
+closeButton.MouseEnter:Connect(function() closeButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50) end)
+closeButton.MouseLeave:Connect(function() closeButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35) end)
+
+closeButton.MouseButton1Click:Connect(function()
+    -- Stop and destroy music
+    local snd = SoundService:FindFirstChild("MusicSound")
+    if snd then
+        snd:Stop()
+        snd:Destroy()
+    end
+
+    -- Destroy the entire GUI (menu + saved panel + B ball)
+    screenGui:Destroy()
+
+    -- Also remove loading GUI just in case
+    local lg = playerGui:FindFirstChild("BaconHubGui")
+    if lg then lg:Destroy() end
+
+    -- Reset flag so re-injecting works cleanly
+    _G.BaconHubLoaded = nil
+
+    print("🥓 Bacon Hub fully closed. Re-inject to open again.")
+end)
+
+-- ============ HOTKEY: M ============
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.M then
-        mainFrame.Visible = not mainFrame.Visible
+        setMenuVisible(not mainFrame.Visible)
     end
 end)
 
 updateVolumeUI()
+refreshSavedList()
 
-print("Bacon Hub loaded!")
+print("Bacon Hub loaded! Click the ⚫ B ball to open/close the menu.")
