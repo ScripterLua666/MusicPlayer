@@ -1,0 +1,658 @@
+-- // ============================================
+-- // BACON HUB
+-- // Loading window (7s) + Music Player
+-- // ============================================
+
+-- // Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- // ============ CLEANUP OLD COPIES ============
+if _G.BaconHubLoaded then
+    for _, gui in ipairs(playerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and (gui.Name == "BaconHubGui" or gui.Name == "BaconPlayerGui") then
+            gui:Destroy()
+        end
+    end
+    for _, s in ipairs(SoundService:GetChildren()) do
+        if s:IsA("Sound") and (s.Name == "MusicSound" or s.Name == "BaconPlayerSound") then
+            s:Destroy()
+        end
+    end
+end
+_G.BaconHubLoaded = true
+
+for _, gui in ipairs(playerGui:GetChildren()) do
+    if gui:IsA("ScreenGui") and (gui.Name == "BaconHubGui" or gui.Name == "BaconPlayerGui" or gui.Name == "MusicPlayerGui") then
+        gui:Destroy()
+    end
+end
+for _, s in ipairs(SoundService:GetChildren()) do
+    if s:IsA("Sound") and (s.Name == "MusicSound" or s.Name == "BaconPlayerSound") then
+        s:Destroy()
+    end
+end
+
+-- // Constants
+local DEFAULT_VOLUME = 0.5
+local LOAD_TIME = 7
+
+-- ============================================
+-- // LOADING WINDOW
+-- ============================================
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "BaconHubGui"
+loadingGui.ResetOnSpawn = false
+loadingGui.IgnoreGuiInset = true
+loadingGui.DisplayOrder = 999
+loadingGui.Parent = playerGui
+
+-- Subtle dark overlay
+local darkOverlay = Instance.new("Frame")
+darkOverlay.Name = "DarkOverlay"
+darkOverlay.Size = UDim2.new(1, 0, 1, 0)
+darkOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+darkOverlay.BackgroundTransparency = 0.55
+darkOverlay.BorderSizePixel = 0
+darkOverlay.Parent = loadingGui
+
+-- Center loading window
+local loadFrame = Instance.new("Frame")
+loadFrame.Name = "LoadFrame"
+loadFrame.Size = UDim2.new(0, 460, 0, 140)
+loadFrame.Position = UDim2.new(0.5, -230, 0.5, -70)
+loadFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+loadFrame.BorderSizePixel = 0
+loadFrame.ZIndex = 2
+loadFrame.Parent = loadingGui
+
+local loadCorner = Instance.new("UICorner")
+loadCorner.CornerRadius = UDim.new(0, 18)
+loadCorner.Parent = loadFrame
+
+local loadStroke = Instance.new("UIStroke")
+loadStroke.Color = Color3.fromRGB(55, 55, 55)
+loadStroke.Thickness = 2
+loadStroke.Parent = loadFrame
+
+local loadGradient = Instance.new("UIGradient")
+loadGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 28, 28)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 8)),
+}
+loadGradient.Rotation = 45
+loadGradient.Parent = loadFrame
+
+-- Title
+local loadTitle = Instance.new("TextLabel")
+loadTitle.Name = "LoadTitle"
+loadTitle.Size = UDim2.new(1, -40, 0, 40)
+loadTitle.Position = UDim2.new(0, 20, 0, 18)
+loadTitle.BackgroundTransparency = 1
+loadTitle.Text = "Bacon Hub"
+loadTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+loadTitle.TextSize = 34
+loadTitle.Font = Enum.Font.GothamBold
+loadTitle.TextXAlignment = Enum.TextXAlignment.Center
+loadTitle.ZIndex = 3
+loadTitle.Parent = loadFrame
+
+-- Subtitle
+local loadSub = Instance.new("TextLabel")
+loadSub.Name = "LoadSub"
+loadSub.Size = UDim2.new(1, -40, 0, 20)
+loadSub.Position = UDim2.new(0, 20, 0, 58)
+loadSub.BackgroundTransparency = 1
+loadSub.Text = "Loading... 0%"
+loadSub.TextColor3 = Color3.fromRGB(170, 170, 170)
+loadSub.TextSize = 14
+loadSub.Font = Enum.Font.Gotham
+loadSub.TextXAlignment = Enum.TextXAlignment.Center
+loadSub.ZIndex = 3
+loadSub.Parent = loadFrame
+
+-- Progress bar background
+local barBg = Instance.new("Frame")
+barBg.Name = "BarBg"
+barBg.Size = UDim2.new(1, -60, 0, 16)
+barBg.Position = UDim2.new(0, 30, 0, 92)
+barBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+barBg.BorderSizePixel = 0
+barBg.ZIndex = 3
+barBg.Parent = loadFrame
+
+local barBgCorner = Instance.new("UICorner")
+barBgCorner.CornerRadius = UDim.new(1, 0)
+barBgCorner.Parent = barBg
+
+-- Green fill
+local barFill = Instance.new("Frame")
+barFill.Name = "BarFill"
+barFill.Size = UDim2.new(0, 0, 1, 0)
+barFill.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+barFill.BorderSizePixel = 0
+barFill.ZIndex = 4
+barFill.Parent = barBg
+
+local barFillCorner = Instance.new("UICorner")
+barFillCorner.CornerRadius = UDim.new(1, 0)
+barFillCorner.Parent = barFill
+
+local barFillGradient = Instance.new("UIGradient")
+barFillGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 200, 90)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 255, 140)),
+}
+barFillGradient.Rotation = 0
+barFillGradient.Parent = barFill
+
+-- // ============ ANIMATION ============
+local startTime = tick()
+local finished = false
+
+local conn
+conn = RunService.RenderStepped:Connect(function()
+    if finished then return end
+    local elapsed = tick() - startTime
+    local alpha = math.clamp(elapsed / LOAD_TIME, 0, 1)
+    local percent = math.floor(alpha * 100 + 0.5)
+
+    barFill.Size = UDim2.new(alpha, 0, 1, 0)
+    loadSub.Text = "Loading... " .. percent .. "%"
+
+    if alpha >= 1 then
+        finished = true
+        conn:Disconnect()
+        -- Instant disappear (no fade, no wait)
+        loadingGui:Destroy()
+    end
+end)
+
+-- ============================================
+-- // WAIT FOR LOADING TO FINISH
+-- ============================================
+while not finished do
+    task.wait(0.05)
+end
+
+-- ============================================
+-- // MUSIC PLAYER
+-- ============================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BaconPlayerGui"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+-- // ============ MAIN FRAME ============
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "BaconPlayer"
+mainFrame.Size = UDim2.new(0, 420, 0, 280)
+mainFrame.Position = UDim2.new(0.5, -210, 0.5, -140)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = false
+mainFrame.Draggable = false
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 18)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(55, 55, 55)
+mainStroke.Thickness = 2
+mainStroke.Parent = mainFrame
+
+local mainGradient = Instance.new("UIGradient")
+mainGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 28, 28)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 8)),
+}
+mainGradient.Rotation = 45
+mainGradient.Parent = mainFrame
+
+-- // ============ DRAG HEADER ============
+local dragBar = Instance.new("Frame")
+dragBar.Name = "DragBar"
+dragBar.Size = UDim2.new(1, -50, 0, 56)   -- leave space for X button
+dragBar.Position = UDim2.new(0, 0, 0, 0)
+dragBar.BackgroundTransparency = 1
+dragBar.Active = true
+dragBar.Parent = mainFrame
+
+local dragBarCorner = Instance.new("UICorner")
+dragBarCorner.CornerRadius = UDim.new(0, 18)
+dragBarCorner.Parent = dragBar
+
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, -20, 0, 32)
+title.Position = UDim2.new(0, 20, 0, 12)
+title.BackgroundTransparency = 1
+title.Text = "Bacon Player"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 22
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = dragBar
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(1, -20, 0, 1)
+divider.Position = UDim2.new(0, 20, 1, -1)
+divider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+divider.BorderSizePixel = 0
+divider.Parent = dragBar
+
+-- // ============ CLOSE BUTTON (×) ============
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 32, 0, 32)
+closeButton.Position = UDim2.new(1, -42, 0, 12)
+closeButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+closeButton.BorderSizePixel = 0
+closeButton.Text = "×"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 24
+closeButton.Font = Enum.Font.GothamBold
+closeButton.AutoButtonColor = false
+closeButton.Active = true
+closeButton.ZIndex = 5
+closeButton.Parent = mainFrame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeButton
+
+closeButton.MouseEnter:Connect(function()
+    closeButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+end)
+closeButton.MouseLeave:Connect(function()
+    closeButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    -- Stop music and destroy the whole GUI
+    local snd = SoundService:FindFirstChild("MusicSound")
+    if snd then snd:Stop() end
+    screenGui:Destroy()
+end)
+
+-- // ============ ID LABEL ============
+local idLabel = Instance.new("TextLabel")
+idLabel.Size = UDim2.new(1, -40, 0, 18)
+idLabel.Position = UDim2.new(0, 20, 0, 68)
+idLabel.BackgroundTransparency = 1
+idLabel.Text = "Song ID"
+idLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+idLabel.TextSize = 13
+idLabel.Font = Enum.Font.Gotham
+idLabel.TextXAlignment = Enum.TextXAlignment.Left
+idLabel.Parent = mainFrame
+
+-- // ============ ID TEXTBOX ============
+local idBox = Instance.new("TextBox")
+idBox.Name = "IdBox"
+idBox.Size = UDim2.new(1, -40, 0, 42)
+idBox.Position = UDim2.new(0, 20, 0, 90)
+idBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+idBox.BorderSizePixel = 0
+idBox.Text = ""
+idBox.PlaceholderText = "Enter song ID..."
+idBox.PlaceholderColor3 = Color3.fromRGB(110, 110, 110)
+idBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+idBox.TextSize = 16
+idBox.Font = Enum.Font.Gotham
+idBox.ClearTextOnFocus = false
+idBox.TextXAlignment = Enum.TextXAlignment.Left
+idBox.Active = true
+idBox.Parent = mainFrame
+
+local idBoxCorner = Instance.new("UICorner")
+idBoxCorner.CornerRadius = UDim.new(0, 10)
+idBoxCorner.Parent = idBox
+
+local idBoxStroke = Instance.new("UIStroke")
+idBoxStroke.Color = Color3.fromRGB(45, 45, 45)
+idBoxStroke.Thickness = 1.5
+idBoxStroke.Parent = idBox
+
+local idBoxPadding = Instance.new("UIPadding")
+idBoxPadding.PaddingLeft = UDim.new(0, 12)
+idBoxPadding.Parent = idBox
+
+idBox.Focused:Connect(function()
+    idBoxStroke.Color = Color3.fromRGB(30, 200, 90)
+end)
+idBox.FocusLost:Connect(function()
+    idBoxStroke.Color = Color3.fromRGB(45, 45, 45)
+end)
+
+-- // ============ PLAY BUTTON ============
+local playButton = Instance.new("TextButton")
+playButton.Name = "PlayButton"
+playButton.Size = UDim2.new(1, -40, 0, 44)
+playButton.Position = UDim2.new(0, 20, 0, 148)
+playButton.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+playButton.BorderSizePixel = 0
+playButton.Text = "Play"
+playButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+playButton.TextSize = 17
+playButton.Font = Enum.Font.GothamBold
+playButton.AutoButtonColor = false
+playButton.Active = true
+playButton.Parent = mainFrame
+
+local playCorner = Instance.new("UICorner")
+playCorner.CornerRadius = UDim.new(0, 10)
+playCorner.Parent = playButton
+
+-- // ============ VOLUME SECTION ============
+local volumeLabel = Instance.new("TextLabel")
+volumeLabel.Size = UDim2.new(1, -40, 0, 18)
+volumeLabel.Position = UDim2.new(0, 20, 0, 205)
+volumeLabel.BackgroundTransparency = 1
+volumeLabel.Text = "Volume"
+volumeLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+volumeLabel.TextSize = 13
+volumeLabel.Font = Enum.Font.Gotham
+volumeLabel.TextXAlignment = Enum.TextXAlignment.Left
+volumeLabel.Parent = mainFrame
+
+local volumeText = Instance.new("TextLabel")
+volumeText.Name = "VolumeText"
+volumeText.Size = UDim2.new(0, 60, 0, 18)
+volumeText.Position = UDim2.new(1, -80, 0, 205)
+volumeText.BackgroundTransparency = 1
+volumeText.Text = math.floor(DEFAULT_VOLUME * 100) .. "%"
+volumeText.TextColor3 = Color3.fromRGB(255, 255, 255)
+volumeText.TextSize = 14
+volumeText.Font = Enum.Font.GothamBold
+volumeText.TextXAlignment = Enum.TextXAlignment.Right
+volumeText.Parent = mainFrame
+
+-- Minus
+local minusButton = Instance.new("TextButton")
+minusButton.Name = "MinusButton"
+minusButton.Size = UDim2.new(0, 36, 0, 36)
+minusButton.Position = UDim2.new(0, 20, 0, 226)
+minusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+minusButton.BorderSizePixel = 0
+minusButton.Text = "−"
+minusButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minusButton.TextSize = 22
+minusButton.Font = Enum.Font.GothamBold
+minusButton.AutoButtonColor = false
+minusButton.Active = true
+minusButton.Parent = mainFrame
+
+local minusCorner = Instance.new("UICorner")
+minusCorner.CornerRadius = UDim.new(0, 8)
+minusCorner.Parent = minusButton
+
+-- Plus
+local plusButton = Instance.new("TextButton")
+plusButton.Name = "PlusButton"
+plusButton.Size = UDim2.new(0, 36, 0, 36)
+plusButton.Position = UDim2.new(1, -56, 0, 226)
+plusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+plusButton.BorderSizePixel = 0
+plusButton.Text = "+"
+plusButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+plusButton.TextSize = 20
+plusButton.Font = Enum.Font.GothamBold
+plusButton.AutoButtonColor = false
+plusButton.Active = true
+plusButton.Parent = mainFrame
+
+local plusCorner = Instance.new("UICorner")
+plusCorner.CornerRadius = UDim.new(0, 8)
+plusCorner.Parent = plusButton
+
+-- Slider background
+local sliderBg = Instance.new("Frame")
+sliderBg.Name = "SliderBg"
+sliderBg.Size = UDim2.new(1, -132, 0, 14)
+sliderBg.Position = UDim2.new(0, 66, 0, 237)
+sliderBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+sliderBg.BorderSizePixel = 0
+sliderBg.Active = true
+sliderBg.Parent = mainFrame
+
+local sliderBgCorner = Instance.new("UICorner")
+sliderBgCorner.CornerRadius = UDim.new(1, 0)
+sliderBgCorner.Parent = sliderBg
+
+-- Slider fill
+local sliderFill = Instance.new("Frame")
+sliderFill.Name = "SliderFill"
+sliderFill.Size = UDim2.new(DEFAULT_VOLUME, 0, 1, 0)
+sliderFill.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+sliderFill.BorderSizePixel = 0
+sliderFill.Active = false
+sliderFill.Parent = sliderBg
+
+local sliderFillCorner = Instance.new("UICorner")
+sliderFillCorner.CornerRadius = UDim.new(1, 0)
+sliderFillCorner.Parent = sliderFill
+
+-- Slider knob
+local sliderKnob = Instance.new("Frame")
+sliderKnob.Name = "Knob"
+sliderKnob.Size = UDim2.new(0, 20, 0, 20)
+sliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
+sliderKnob.Position = UDim2.new(DEFAULT_VOLUME, 0, 0.5, 0)
+sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+sliderKnob.BorderSizePixel = 0
+sliderKnob.ZIndex = 2
+sliderKnob.Active = false
+sliderKnob.Parent = sliderBg
+
+local sliderKnobCorner = Instance.new("UICorner")
+sliderKnobCorner.CornerRadius = UDim.new(1, 0)
+sliderKnobCorner.Parent = sliderKnob
+
+-- Slider hit area
+local sliderHit = Instance.new("TextButton")
+sliderHit.Name = "SliderHit"
+sliderHit.Size = UDim2.new(1, -132, 0, 28)
+sliderHit.Position = UDim2.new(0, 66, 0, 230)
+sliderHit.BackgroundTransparency = 1
+sliderHit.Text = ""
+sliderHit.AutoButtonColor = false
+sliderHit.Active = true
+sliderHit.ZIndex = 5
+sliderHit.Parent = mainFrame
+
+-- // ============ SOUND ============
+local sound = Instance.new("Sound")
+sound.Name = "MusicSound"
+sound.Volume = DEFAULT_VOLUME
+sound.Looped = true
+sound.Parent = SoundService
+
+-- // ============ VOLUME LOGIC ============
+local currentVolume = DEFAULT_VOLUME
+
+local function updateVolumeUI()
+    local percent = math.floor(currentVolume * 100)
+    volumeText.Text = percent .. "%"
+
+    TweenService:Create(sliderFill, TweenInfo.new(0.1), {
+        Size = UDim2.new(currentVolume, 0, 1, 0)
+    }):Play()
+
+    TweenService:Create(sliderKnob, TweenInfo.new(0.1), {
+        Position = UDim2.new(currentVolume, 0, 0.5, 0)
+    }):Play()
+
+    if currentVolume <= 0.01 then
+        sliderFill.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    elseif currentVolume < 0.3 then
+        sliderFill.BackgroundColor3 = Color3.fromRGB(240, 170, 30)
+    else
+        sliderFill.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+    end
+end
+
+local function setVolume(value)
+    currentVolume = math.clamp(value, 0, 1)
+    sound.Volume = currentVolume
+    updateVolumeUI()
+end
+
+-- // ============ SLIDER DRAG ============
+local sliderDragging = false
+
+local function setVolumeFromX(mouseX)
+    local relX = (mouseX - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+    setVolume(relX)
+end
+
+sliderHit.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        sliderDragging = true
+        setVolumeFromX(input.Position.X)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if sliderDragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch) then
+        setVolumeFromX(input.Position.X)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        sliderDragging = false
+    end
+end)
+
+-- // ============ PLAY / STOP ============
+local isPlaying = false
+
+local function playMusic()
+    if isPlaying then
+        sound:Stop()
+        isPlaying = false
+        playButton.Text = "Play"
+        playButton.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+        idBox.PlaceholderText = "Enter song ID..."
+        return
+    end
+
+    local id = tonumber(idBox.Text)
+    if not id then
+        idBox.PlaceholderText = "❌ Invalid ID!"
+        idBox.Text = ""
+        task.wait(1.5)
+        idBox.PlaceholderText = "Enter song ID..."
+        return
+    end
+
+    sound:Stop()
+    sound.SoundId = "rbxassetid://" .. id
+    sound:Play()
+    isPlaying = true
+
+    playButton.Text = "Stop"
+    playButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    idBox.PlaceholderText = "Now playing: " .. id
+end
+
+-- // ============ BUTTON EVENTS ============
+playButton.MouseEnter:Connect(function()
+    if not isPlaying then
+        playButton.BackgroundColor3 = Color3.fromRGB(50, 230, 110)
+    else
+        playButton.BackgroundColor3 = Color3.fromRGB(240, 70, 70)
+    end
+end)
+playButton.MouseLeave:Connect(function()
+    if not isPlaying then
+        playButton.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
+    else
+        playButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    end
+end)
+playButton.MouseButton1Click:Connect(playMusic)
+
+minusButton.MouseEnter:Connect(function()
+    minusButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+end)
+minusButton.MouseLeave:Connect(function()
+    minusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+end)
+minusButton.MouseButton1Click:Connect(function()
+    setVolume(currentVolume - 0.1)
+end)
+
+plusButton.MouseEnter:Connect(function()
+    plusButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+end)
+plusButton.MouseLeave:Connect(function()
+    plusButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+end)
+plusButton.MouseButton1Click:Connect(function()
+    setVolume(currentVolume + 0.1)
+end)
+
+-- // ============ ENTER IN TEXTBOX ============
+idBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        playMusic()
+    end
+end)
+
+-- // ============ WINDOW DRAG VIA HEADER ============
+local draggingWindow = false
+local dragOffset = Vector2.new(0, 0)
+
+dragBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWindow = true
+        dragOffset = Vector2.new(
+            input.Position.X - mainFrame.AbsolutePosition.X,
+            input.Position.Y - mainFrame.AbsolutePosition.Y
+        )
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingWindow and (input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch) then
+        mainFrame.Position = UDim2.new(
+            0, input.Position.X - dragOffset.X,
+            0, input.Position.Y - dragOffset.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWindow = false
+    end
+end)
+
+-- // ============ HOTKEY: M ============
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.M then
+        mainFrame.Visible = not mainFrame.Visible
+    end
+end)
+
+updateVolumeUI()
+
+print("Bacon Hub loaded!")
