@@ -483,6 +483,24 @@ local function attachLoader(cardHandle, statusHandle, url)
                 loading = false
             end
 
+            local function succeed(warningMode)
+                if warningMode then
+                    statusHandle.Text.Text = "Loaded with warnings"
+                    TweenService:Create(statusHandle.Text, TweenInfo.new(0.2), {TextColor3 = C.Warn}):Play()
+                    TweenService:Create(statusHandle.Dot, TweenInfo.new(0.2), {BackgroundColor3 = C.Warn}):Play()
+                else
+                    statusHandle.Text.Text = "Script loaded successfully ✓"
+                    TweenService:Create(statusHandle.Text, TweenInfo.new(0.2), {TextColor3 = C.Success}):Play()
+                    TweenService:Create(statusHandle.Dot, TweenInfo.new(0.2), {BackgroundColor3 = C.Success}):Play()
+                end
+                cardHandle.LoadBtn.Text = "LOADED"
+                TweenService:Create(cardHandle.LoadBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.Success}):Play()
+                task.wait(1.5)
+                cardHandle.LoadBtn.Text = "LOAD"
+                TweenService:Create(cardHandle.LoadBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.Accent}):Play()
+                loading = false
+            end
+
             local source
             local ok1 = pcall(function() source = game:HttpGet(url) end)
             if not ok1 or not source or source == "" then
@@ -491,34 +509,29 @@ local function attachLoader(cardHandle, statusHandle, url)
             end
 
             if not source or source == "" then
-                fail("Error: HttpGet returned no data"); return
+                fail("Failed to download"); return
             end
             if type(source) ~= "string" then
-                fail("Error: HttpGet returned " .. typeof(source)); return
+                fail("Invalid data"); return
             end
             if #source < 20 then
-                fail("Error: empty response (" .. #source .. " bytes)"); return
+                fail("Empty script"); return
             end
 
             local fn, compileErr = loadstring(source)
             if not fn then
-                fail("Compile error: " .. tostring(compileErr)); return
+                fail("Compile failed")
+                warn("[Bacon Hub] compile error:", compileErr)
+                return
             end
 
             local ok3, runErr = pcall(fn)
             if not ok3 then
-                fail("Runtime error: " .. tostring(runErr)); return
+                warn("[Bacon Hub] runtime warning:", runErr)
+                succeed(true)
+            else
+                succeed(false)
             end
-
-            statusHandle.Text.Text = "Script loaded successfully ✓"
-            TweenService:Create(statusHandle.Text, TweenInfo.new(0.2), {TextColor3 = C.Success}):Play()
-            TweenService:Create(statusHandle.Dot, TweenInfo.new(0.2), {BackgroundColor3 = C.Success}):Play()
-            cardHandle.LoadBtn.Text = "LOADED"
-            TweenService:Create(cardHandle.LoadBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.Success}):Play()
-            task.wait(1.5)
-            cardHandle.LoadBtn.Text = "LOAD"
-            TweenService:Create(cardHandle.LoadBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.Accent}):Play()
-            loading = false
         end)
     end)
 end
@@ -542,7 +555,6 @@ bigTitle.TextSize = 24
 bigTitle.TextXAlignment = Enum.TextXAlignment.Left
 bigTitle.Parent = MainPage
 
--- Подпись автора — теперь "By TT_Becon4ik"
 local bigSub = Instance.new("TextLabel")
 bigSub.Size = UDim2.new(1, -56, 0, 16)
 bigSub.Position = UDim2.new(0, 28, 1, -90)
@@ -557,7 +569,8 @@ bigSub.Parent = MainPage
 local MainCard = buildCard(MainPage, "Bacon Hub", "Steal An Egg Script", "B", 24)
 local MainStatusBar = buildStatusBar(MainPage)
 
-local MAIN_URL = "https://raw.githubusercontent.com/ScripterLua666/Roblox-Scripts/8c3df77ee090589604075a788247c84fa0c5f55d/ScripterLua666"
+-- НОВАЯ ССЫЛКА
+local MAIN_URL = "https://raw.githubusercontent.com/ScripterLua666/Roblox-Scripts/refs/heads/main/ScripterLua666"
 attachLoader(MainCard, MainStatusBar, MAIN_URL)
 
 -- ============ EXTRA SCRIPTS PAGE ============
