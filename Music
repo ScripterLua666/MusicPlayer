@@ -2,6 +2,7 @@
 -- // BACON HUB
 -- // Loading + Music Player + Saved Songs + B-Ball toggle
 -- // Each saved row: ▶ Play · ■ Stop · × Delete
+-- // Smart panel positioning (never goes off-screen)
 -- // ============================================
 
 local Players = game:GetService("Players")
@@ -522,6 +523,42 @@ emptyLabel.TextWrapped = true
 emptyLabel.Parent = scroll
 
 -- ============================================
+-- // SMART PANEL POSITIONING
+-- ============================================
+local function positionSavedPanel()
+    local cam = workspace.CurrentCamera
+    local vpSize = cam.ViewportSize
+
+    local menuX = mainFrame.AbsolutePosition.X
+    local menuY = mainFrame.AbsolutePosition.Y
+    local menuW = mainFrame.AbsoluteSize.X
+    local panelW = savedPanel.AbsoluteSize.X
+    if panelW == 0 then panelW = 340 end
+    local panelH = savedPanel.AbsoluteSize.Y
+    if panelH == 0 then panelH = 330 end
+
+    local gap = 12
+    local screenW = vpSize.X
+    local screenH = vpSize.Y
+
+    -- Try right side first
+    local x = menuX + menuW + gap
+    if x + panelW > screenW - 8 then
+        -- Not enough room → put on the left
+        x = menuX - panelW - gap
+        if x < 8 then
+            -- No room left either → clamp to the screen edge
+            x = math.clamp(x, 8, screenW - panelW - 8)
+        end
+    end
+
+    -- Vertical clamp
+    local y = math.clamp(menuY, 8, screenH - panelH - 8)
+
+    savedPanel.Position = UDim2.new(0, x, 0, y)
+end
+
+-- ============================================
 -- // ⚫ FLOATING "B" BALL TOGGLE
 -- // White "B" with BLACK outline
 -- ============================================
@@ -887,8 +924,9 @@ end)
 savedToggleBtn.MouseButton1Click:Connect(function()
     savedPanel.Visible = not savedPanel.Visible
     if savedPanel.Visible then
-        savedPanel.Position = UDim2.new(0, mainFrame.Position.X.Offset + 440, 0, mainFrame.Position.Y.Offset)
         refreshSavedList()
+        task.wait()
+        positionSavedPanel()
     end
 end)
 
@@ -910,7 +948,7 @@ UserInputService.InputChanged:Connect(function(input)
     if draggingWindow and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         mainFrame.Position = UDim2.new(0, input.Position.X - dragOffset.X, 0, input.Position.Y - dragOffset.Y)
         if savedPanel.Visible then
-            savedPanel.Position = UDim2.new(0, mainFrame.Position.X.Offset + 440, 0, mainFrame.Position.Y.Offset)
+            positionSavedPanel()
         end
     end
 end)
