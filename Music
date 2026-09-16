@@ -467,7 +467,7 @@ panelGradient.Rotation = 45
 panelGradient.Parent = savedPanel
 
 local savedTitle = Instance.new("TextLabel")
-savedTitle.Size = UDim2.new(1, -90, 0, 32)
+savedTitle.Size = UDim2.new(1, -40, 0, 32)
 savedTitle.Position = UDim2.new(0, 20, 0, 15)
 savedTitle.BackgroundTransparency = 1
 savedTitle.Text = "★ Saved Songs"
@@ -476,34 +476,6 @@ savedTitle.TextSize = 20
 savedTitle.Font = Enum.Font.GothamBold
 savedTitle.TextXAlignment = Enum.TextXAlignment.Left
 savedTitle.Parent = savedPanel
-
--- ============ RED SQUARE STOP BUTTON (panel header) ============
-local panelStopBtn = Instance.new("TextButton")
-panelStopBtn.Name = "PanelStopButton"
-panelStopBtn.Size = UDim2.new(0, 26, 0, 26)
-panelStopBtn.Position = UDim2.new(1, -46, 0, 18)
-panelStopBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-panelStopBtn.BorderSizePixel = 0
-panelStopBtn.Text = "■"
-panelStopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-panelStopBtn.TextSize = 14
-panelStopBtn.Font = Enum.Font.GothamBold
-panelStopBtn.AutoButtonColor = false
-panelStopBtn.ZIndex = 5
-panelStopBtn.Parent = savedPanel
-
-Instance.new("UICorner", panelStopBtn).CornerRadius = UDim.new(0, 6)
-
-panelStopBtn.MouseEnter:Connect(function() panelStopBtn.BackgroundColor3 = Color3.fromRGB(240, 70, 70) end)
-panelStopBtn.MouseLeave:Connect(function() panelStopBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50) end)
-
-panelStopBtn.MouseButton1Click:Connect(function()
-    sound:Stop()
-    isPlaying = false
-    playButton.Text = "Play"
-    playButton.BackgroundColor3 = Color3.fromRGB(30, 200, 90)
-    idBox.PlaceholderText = "Enter song ID..."
-end)
 
 local savedDivider = Instance.new("Frame")
 savedDivider.Size = UDim2.new(1, -40, 0, 1)
@@ -837,7 +809,7 @@ local function refreshSavedList()
             playMusic()
         end)
 
-        -- ■ STOP (red) — right next to play arrow
+        -- ■ STOP (red)
         local stopEntry = Instance.new("TextButton")
         stopEntry.Size = UDim2.new(0, 32, 0, 32)
         stopEntry.Position = UDim2.new(1, -78, 0.5, -16)
